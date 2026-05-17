@@ -1,0 +1,6 @@
+lib/
+out/
+build/
+.vscode/
+bin/
+project_dump.txt

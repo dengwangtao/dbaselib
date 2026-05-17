@@ -1,0 +1,89 @@
+cmake_minimum_required(VERSION 3.24)
+
+project(
+    dbase
+    VERSION 0.1.0
+    DESCRIPTION "Cross-platform C++20 base library"
+    LANGUAGES CXX
+)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+get_filename_component(PROJ_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" ABSOLUTE)
+message(STATUS "PROJ_ROOT: ${PROJ_ROOT}")
+
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    add_compile_options(/utf-8)
+endif()
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib")
+
+foreach(OUTPUTCONFIG Debug Release RelWithDebInfo MinSizeRel)
+    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG_UPPER)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG_UPPER} "${CMAKE_SOURCE_DIR}/bin/${OUTPUTCONFIG}")
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG_UPPER} "${CMAKE_SOURCE_DIR}/lib/${OUTPUTCONFIG}")
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG_UPPER} "${CMAKE_SOURCE_DIR}/lib/${OUTPUTCONFIG}")
+endforeach()
+
+option(DBASE_BUILD_SHARED "Build shared library" OFF)
+option(DBASE_BUILD_TESTS "Build tests" OFF)
+option(DBASE_BUILD_BENCHMARKS "Build benchmarks" ON)
+# option(DBASE_ENABLE_ASAN "Enable AddressSanitizer" OFF)
+# option(DBASE_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
+# option(DBASE_ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+option(DBASE_BUILD_EXAMPLES "Build examples" ON)
+option(DBASE_ENABLE_WARNINGS "Enable compiler warnings" ON)
+option(DBASE_ENABLE_WERROR "Treat warnings as errors" OFF)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+include(FetchContent)
+include(CTest)
+include(ProjectOptions)
+include(ProjectWarnings)
+include(ProjectUtils)
+
+dbase_print_platform_info()
+dbase_setup_global_options()
+
+add_subdirectory(src)
+
+if(DBASE_BUILD_TESTS)
+    enable_testing()
+
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.5.4
+    )
+    FetchContent_MakeAvailable(Catch2)
+
+    list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
+
+    add_subdirectory(tests)
+endif()
+
+if(DBASE_BUILD_BENCHMARKS)
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(
+        benchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG v1.8.4
+    )
+    FetchContent_MakeAvailable(benchmark)
+
+    add_subdirectory(benchmarks)
+endif()
+
+if(DBASE_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
