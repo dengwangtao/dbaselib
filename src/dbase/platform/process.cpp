@@ -84,36 +84,73 @@ std::uint64_t tid() noexcept
 
 dbase::Result<std::filesystem::path> executablePath()
 {
+    static const auto cached_path = []() -> dbase::Result<std::filesystem::path>
+    {
 #if defined(_WIN32)
-    std::wstring buffer;
-    buffer.resize(1024);
+        std::wstring buffer(1024, L'\0');
 
-    const DWORD len = ::GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
-    if (len == 0)
-    {
-        return dbase::Result<std::filesystem::path>(
-                dbase::Error(dbase::ErrorCode::SystemError, "GetModuleFileNameW failed"));
-    }
+        for (;;)
+        {
+            const DWORD len = ::GetModuleFileNameW(
+                    nullptr,
+                    buffer.data(),
+                    static_cast<DWORD>(buffer.size()));
 
-    buffer.resize(len);
-    return dbase::Result<std::filesystem::path>(std::filesystem::path(buffer));
+            if (len == 0)
+            {
+                return dbase::Result<std::filesystem::path>(
+                        dbase::Error(
+                                dbase::ErrorCode::SystemError,
+                                "GetModuleFileNameW failed"));
+            }
+
+            if (len < buffer.size())
+            {
+                buffer.resize(len);
+                return dbase::Result<std::filesystem::path>(
+                        std::filesystem::path(buffer));
+            }
+
+            buffer.resize(buffer.size() * 2);
+        }
+
 #elif defined(__linux__)
-    std::string buffer;
-    buffer.resize(4096);
+        std::string buffer(1024, '\0');
 
-    const auto len = ::readlink("/proc/self/exe", buffer.data(), buffer.size());
-    if (len < 0)
-    {
-        return dbase::Result<std::filesystem::path>(
-                dbase::Error(dbase::ErrorCode::SystemError, "readlink /proc/self/exe failed"));
-    }
+        for (;;)
+        {
+            const auto len = ::readlink(
+                    "/proc/self/exe",
+                    buffer.data(),
+                    buffer.size());
 
-    buffer.resize(static_cast<std::size_t>(len));
-    return dbase::Result<std::filesystem::path>(std::filesystem::path(buffer));
+            if (len < 0)
+            {
+                return dbase::Result<std::filesystem::path>(
+                        dbase::Error(
+                                dbase::ErrorCode::SystemError,
+                                "readlink /proc/self/exe failed"));
+            }
+
+            if (static_cast<std::size_t>(len) < buffer.size())
+            {
+                buffer.resize(static_cast<std::size_t>(len));
+                return dbase::Result<std::filesystem::path>(
+                        std::filesystem::path(buffer));
+            }
+
+            buffer.resize(buffer.size() * 2);
+        }
+
 #else
-    return dbase::Result<std::filesystem::path>(
-            dbase::Error(dbase::ErrorCode::NotSupported, "executablePath not supported on this platform"));
+        return dbase::Result<std::filesystem::path>(
+                dbase::Error(
+                        dbase::ErrorCode::NotSupported,
+                        "executablePath not supported on this platform"));
 #endif
+    }();
+
+    return cached_path;
 }
 
 }  // namespace dbase::platform
