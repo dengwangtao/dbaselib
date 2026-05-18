@@ -76,5 +76,10 @@ int main()
         }
     }
 
+    resetDefaultSinks();
+    addDefaultMode(LogMode::Async);
+
+    DBASE_LOG_INFO("[Async] This is an info message");
+
     return 0;
 }

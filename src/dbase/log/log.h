@@ -8,6 +8,14 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <condition_variable>
+#include <deque>
+#include <future>
+
+namespace dbase::thread
+{
+class Thread;
+}
 
 namespace dbase::log
 {
@@ -21,6 +29,18 @@ enum class Level
     Warn,
     Error,
     Fatal
+};
+
+enum class LogMode
+{
+    Sync,
+    Async
+};
+
+enum class LogTaskType
+{
+    Write,
+    Flush
 };
 
 enum class PatternStyle : std::uint32_t
@@ -108,6 +128,17 @@ class Logger
     public:
         Logger();
         explicit Logger(PatternStyle style);
+        Logger(PatternStyle style, LogMode mode);
+        ~Logger();
+
+        Logger(const Logger&) = delete;
+        Logger& operator=(const Logger&) = delete;
+
+        Logger(Logger&&) = delete;
+        Logger& operator=(Logger&&) = delete;
+
+        void setMode(LogMode mode);
+        [[nodiscard]] LogMode mode() const noexcept;
 
         void setLevel(Level level) noexcept;
         [[nodiscard]] Level level() const noexcept;
@@ -137,11 +168,37 @@ class Logger
         }
 
     private:
+        struct LogTask
+        {
+                LogTaskType type{LogTaskType::Write};
+                LogEvent event;
+                Formatter formatter;
+                std::vector<std::shared_ptr<Sink>> sinks;
+                Level flushOn{Level::Error};
+
+                std::shared_ptr<std::promise<void>> flushPromise;
+        };
+
+        void startWorker();
+        void stopWorker();
+        void workerLoop();
+        void writeTask(const LogTask& task);
+
+    private:
         mutable std::mutex m_mutex;
         std::atomic<Level> m_level{Level::Info};
         std::atomic<Level> m_flushOn{Level::Error};
         Formatter m_formatter;
         std::vector<std::shared_ptr<Sink>> m_sinks;
+
+        std::atomic<LogMode> m_mode{LogMode::Sync};
+
+        // async mode specific members
+        std::mutex m_queueMutex;
+        std::condition_variable m_queueCv;
+        std::deque<LogTask> m_queue;
+        std::unique_ptr<dbase::thread::Thread> m_worker;
+        bool m_stopping{false};
 };
 
 [[nodiscard]] const char* toString(Level level) noexcept;
@@ -152,6 +209,7 @@ void setDefaultLevel(Level level) noexcept;
 void setDefaultPatternStyle(PatternStyle style) noexcept;
 void setDefaultFlushOn(Level level) noexcept;
 void addDefaultSink(std::shared_ptr<Sink> sink);
+void addDefaultMode(LogMode mode);
 void resetDefaultSinks();
 void flushDefaultLogger();
 void clearDefaultSinks();

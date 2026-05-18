@@ -23,13 +23,19 @@ class NullSink final : public dbase::log::Sink
         }
 };
 
-std::shared_ptr<dbase::log::Logger> makeLogger(dbase::log::PatternStyle style)
+
+static constexpr dbase::log::LogMode kSyncMode = dbase::log::LogMode::Async;
+
+
+
+std::shared_ptr<dbase::log::Logger> makeLogger(dbase::log::PatternStyle style, dbase::log::LogMode mode = kSyncMode)
 {
     auto logger = std::make_shared<dbase::log::Logger>(style);
     logger->clearSinks();
     logger->addSink(std::make_shared<NullSink>());
     logger->setLevel(dbase::log::Level::Trace);
     logger->setFlushOn(dbase::log::Level::Fatal);
+    logger->setMode(mode);
     return logger;
 }
 }  // namespace

@@ -2,6 +2,7 @@
 #include "dbase/log/sink.h"
 #include "dbase/platform/process.h"
 #include "dbase/time/time.h"
+#include "dbase/thread/thread.h"
 
 #include <format>
 #include <string>
@@ -203,6 +204,48 @@ Logger::Logger(PatternStyle style)
     m_sinks.emplace_back(std::make_shared<ConsoleSink>());
 }
 
+Logger::Logger(PatternStyle style, LogMode mode)
+    : m_formatter(style)
+{
+    m_sinks.emplace_back(std::make_shared<ConsoleSink>());
+    if (mode == LogMode::Async)
+    {
+        m_mode.store(LogMode::Async, std::memory_order_release);
+        startWorker();
+    }
+}
+
+Logger::~Logger()
+{
+    stopWorker();
+}
+
+void Logger::setMode(LogMode mode)
+{
+    const auto oldMode = m_mode.load(std::memory_order_acquire);
+
+    if (oldMode == mode)
+    {
+        return;
+    }
+
+    if (mode == LogMode::Async)
+    {
+        startWorker();
+        m_mode.store(LogMode::Async, std::memory_order_release);
+    }
+    else
+    {
+        m_mode.store(LogMode::Sync, std::memory_order_release);
+        stopWorker();
+    }
+}
+
+LogMode Logger::mode() const noexcept
+{
+    return m_mode.load(std::memory_order_acquire);
+}
+
 void Logger::setLevel(Level level) noexcept
 {
     m_level.store(level, std::memory_order_release);
@@ -266,10 +309,30 @@ void Logger::flush()
         sinksCopy = m_sinks;
     }
 
-    for (const auto& sink : sinksCopy)
+    if (m_mode.load(std::memory_order_acquire) == LogMode::Sync)
     {
-        sink->flush();
+        for (const auto& sink : sinksCopy)
+        {
+            sink->flush();
+        }
+        return;
     }
+
+    auto promise = std::make_shared<std::promise<void>>();
+    auto future = promise->get_future();
+
+    LogTask task;
+    task.type = LogTaskType::Flush;
+    task.sinks = std::move(sinksCopy);
+    task.flushPromise = std::move(promise);
+
+    {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        m_queue.emplace_back(std::move(task));
+    }
+
+    m_queueCv.notify_one();
+    future.wait();
 }
 
 void Logger::log(Level level, std::string_view message, const std::source_location& location)
@@ -279,34 +342,27 @@ void Logger::log(Level level, std::string_view message, const std::source_locati
         return;
     }
 
-    std::vector<std::shared_ptr<Sink>> sinksCopy;
-    Formatter formatterCopy;
-    const Level flushOnLevel = m_flushOn.load(std::memory_order_acquire);
-
+    LogTask task;
+    task.flushOn = m_flushOn.load(std::memory_order_acquire);
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        sinksCopy = m_sinks;
-        formatterCopy = m_formatter;
+        task.sinks = m_sinks;
+        task.formatter = m_formatter;
     }
+    task.event = detail::makeLogEvent(level, message, location, task.formatter.style());
 
-    const auto style = formatterCopy.style();
-
-    const auto event = detail::makeLogEvent(level, message, location, style);
-
-    const auto formatted = formatterCopy.format(event);
-
-    for (const auto& sink : sinksCopy)
+    if (m_mode.load(std::memory_order_acquire) == LogMode::Async)
     {
-        sink->write(event, formatted);
-    }
-
-    if (static_cast<int>(level) >= static_cast<int>(flushOnLevel))
-    {
-        for (const auto& sink : sinksCopy)
         {
-            sink->flush();
+            std::lock_guard<std::mutex> lock(m_queueMutex);
+            m_queue.emplace_back(std::move(task));
         }
+
+        m_queueCv.notify_one();
+        return;
     }
+
+    writeTask(task);
 }
 
 const char* toString(Level level) noexcept
@@ -377,6 +433,11 @@ void addDefaultSink(std::shared_ptr<Sink> sink)
     defaultLogger().addSink(std::move(sink));
 }
 
+void addDefaultMode(LogMode mode)
+{
+    defaultLogger().setMode(mode);
+}
+
 void resetDefaultSinks()
 {
     auto& logger = defaultLogger();
@@ -398,4 +459,94 @@ void log(Level level, std::string_view message, const std::source_location& loca
 {
     defaultLogger().log(level, message, location);
 }
+
+void Logger::startWorker()
+{
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+
+    if (m_worker && m_worker->joinable())
+    {
+        return;
+    }
+
+    m_stopping = false;
+
+    m_worker = std::make_unique<dbase::thread::Thread>([this]
+                                                       { workerLoop(); }, "logger_worker");
+    m_worker->start();
+}
+
+void Logger::stopWorker()
+{
+    {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        m_stopping = true;
+    }
+
+    m_queueCv.notify_all();
+
+    if (m_worker && m_worker->joinable())
+    {
+        m_worker->join();
+    }
+}
+
+void Logger::workerLoop()
+{
+    for (;;)
+    {
+        LogTask task;
+
+        {
+            std::unique_lock<std::mutex> lock(m_queueMutex);
+
+            m_queueCv.wait(lock, [this]
+                           { return m_stopping || !m_queue.empty(); });
+
+            if (m_stopping && m_queue.empty())
+            {
+                break;
+            }
+
+            task = std::move(m_queue.front());
+            m_queue.pop_front();
+        }
+
+        writeTask(task);
+    }
+}
+
+void Logger::writeTask(const LogTask& task)
+{
+    if (task.type == LogTaskType::Flush)
+    {
+        for (const auto& sink : task.sinks)
+        {
+            sink->flush();
+        }
+
+        if (task.flushPromise)
+        {
+            task.flushPromise->set_value();
+        }
+
+        return;
+    }
+
+    const auto formatted = task.formatter.format(task.event);
+
+    for (const auto& sink : task.sinks)
+    {
+        sink->write(task.event, formatted);
+    }
+
+    if (static_cast<int>(task.event.level) >= static_cast<int>(task.flushOn))
+    {
+        for (const auto& sink : task.sinks)
+        {
+            sink->flush();
+        }
+    }
+}
+
 }  // namespace dbase::log
