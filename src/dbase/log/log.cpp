@@ -74,12 +74,10 @@ LogEvent makeLogEvent(
     LogEvent event;
     event.level = level;
     event.message = std::string(message);
-    event.file = baseFileName(location.file_name());
-    event.function = normalizeFunctionName(location.function_name());
-    event.line = location.line();
     event.pid = dbase::platform::pid();
     event.tid = dbase::platform::tid();
     event.timestampUs = dbase::time::nowUs();
+    event.sourceLocation = location;
     return event;
 }
 }  // namespace detail
@@ -131,8 +129,8 @@ std::string Formatter::formatSource(const LogEvent& event) const
             "[{}] [{}] [{}:{}] {}",
             formatTimestampUs(event.timestampUs),
             toSpdlogString(event.level),
-            event.file,
-            event.line,
+            baseFileName(event.sourceLocation.file_name()),
+            event.sourceLocation.line(),
             event.message);
 }
 
@@ -142,9 +140,9 @@ std::string Formatter::formatSourceFunction(const LogEvent& event) const
             "[{}] [{}] [{}:{}] [{}] {}",
             formatTimestampUs(event.timestampUs),
             toSpdlogString(event.level),
-            event.file,
-            event.line,
-            event.function,
+            baseFileName(event.sourceLocation.file_name()),
+            event.sourceLocation.line(),
+            normalizeFunctionName(event.sourceLocation.function_name()),
             event.message);
 }
 
@@ -156,9 +154,9 @@ std::string Formatter::formatThreaded(const LogEvent& event) const
             toSpdlogString(event.level),
             event.pid,
             event.tid,
-            event.file,
-            event.line,
-            event.function,
+            baseFileName(event.sourceLocation.file_name()),
+            event.sourceLocation.line(),
+            normalizeFunctionName(event.sourceLocation.function_name()),
             event.message);
 }
 

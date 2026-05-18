@@ -35,12 +35,10 @@ struct LogEvent
 {
         Level level{Level::Info};
         std::string message;
-        std::string file;
-        std::string function;
-        std::uint_least32_t line{0};
         std::uint64_t pid{0};
         std::uint64_t tid{0};
         std::int64_t timestampUs{0};
+        std::source_location sourceLocation{};
 };
 
 namespace detail
