@@ -138,7 +138,7 @@ std::string Formatter::format(const LogEvent& event) const
 
         if (hasPatternField(m_style, PatternStyle::ProcessId))
         {
-            output += std::format("p={}", event.pid);
+            output += std::format("pid={}", event.pid);
             needSeparator = true;
         }
 
@@ -146,10 +146,10 @@ std::string Formatter::format(const LogEvent& event) const
         {
             if (needSeparator)
             {
-                output += '|';
+                output += ' ';
             }
 
-            output += std::format("t={}", event.tid);
+            output += std::format("tid={}", event.tid);
         }
 
         output += "] ";
