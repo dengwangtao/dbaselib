@@ -1,6 +1,7 @@
 #include "dbase/stl/util.hpp"
 #include "dbase/log/log.h"
 #include "dbase/stl/type_traits.hpp"
+#include "dbase/stl/iterator.hpp"
 
 int main()
 {
@@ -31,6 +32,9 @@ int main()
 
 
     static_assert(dbase::stl::is_pair_v<decltype(p6)> == true, "");
+
+
+    dbase::stl::iterator<dbase::stl::random_access_iterator_tag, int> iter;
 
     return 0;
 }

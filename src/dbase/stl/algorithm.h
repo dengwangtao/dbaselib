@@ -1,0 +1,17 @@
+﻿#ifndef DBASE_STL_ALGORITHM_H_
+#define DBASE_STL_ALGORITHM_H_
+
+// 这个头文件包含了 dbase::stl 的所有算法，包括基本算法，数值算法，heap 算法，set 算法和其他算法
+
+#include "algobase.h"
+#include "algo.h"
+#include "set_algo.h"
+#include "heap_algo.h"
+#include "numeric.h"
+
+namespace dbase::stl
+{
+
+}  // namespace dbase::stl
+
+#endif  // !DBASE_STL_ALGORITHM_H_

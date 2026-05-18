@@ -87,3 +87,21 @@ endif()
 if(DBASE_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
+
+
+# format files
+find_program(CLANG_FORMAT_EXE NAMES clang-format)
+message(STATUS "The clang-format executable is: ${CLANG_FORMAT_EXE} CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR}/src/dbase")
+file(GLOB_RECURSE ALL_CXX_SOURCE_FILES
+    ${CMAKE_SOURCE_DIR}/src/dbase/*.h
+    ${CMAKE_SOURCE_DIR}/src/dbase/*.hpp
+    ${CMAKE_SOURCE_DIR}/src/dbase/*.c
+    ${CMAKE_SOURCE_DIR}/src/dbase/*.cc
+    ${CMAKE_SOURCE_DIR}/src/dbase/*.cpp
+)
+add_custom_target(format
+    COMMAND ${CLANG_FORMAT_EXE} -i ${ALL_CXX_SOURCE_FILES}
+	COMMENT "Running clang-format on all source files: ${ALL_CXX_SOURCE_FILES}"
+)
+# format files end
