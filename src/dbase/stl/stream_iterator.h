@@ -1,7 +1,7 @@
 ﻿#ifndef DBASE_STL_STREAM_ITERATOR_H_
 #define DBASE_STL_STREAM_ITERATOR_H_
 
-#include "basic_string.h"
+#include "dbase/stl/basic_string.h"
 
 namespace dbase::stl
 {

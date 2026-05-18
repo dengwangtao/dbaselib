@@ -5,7 +5,7 @@
 
 // use standard header for type_traits
 #include <type_traits>
-#include "util.h"
+#include "dbase/stl/util.h"
 namespace dbase::stl
 {
 
@@ -20,7 +20,7 @@ namespace dbase::stl
 
 // // 特化模板：当 T 有 first_type 和 second_type 时继承 true_type
 // template <class T>
-// struct is_pair<T, std::void_t<typename T::first_type, typename T::second_type>>
+// struct is_pair<T, dbase::stl::void_t<typename T::first_type, typename T::second_type>>
 //     : dbase::stl::true_type {};
 
 template <class T>

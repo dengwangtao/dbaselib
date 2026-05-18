@@ -7,8 +7,8 @@
 
 #include <new>
 
-#include "type_traits.h"
-#include "iterator.h"
+#include "dbase/stl/type_traits.h"
+#include "dbase/stl/iterator.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)

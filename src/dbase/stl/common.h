@@ -53,6 +53,10 @@ using bool_constant = dwt_constant<bool, val>;
 using true_type = bool_constant<true>;
 using false_type = bool_constant<false>;
 
+
+template <class... _Types>
+using void_t = void;
+
 };  // namespace dbase::stl
 
 #endif  // !DBASE_STL_COMMON_H_

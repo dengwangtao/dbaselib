@@ -11,10 +11,10 @@
 #include <cstddef>
 #include <ctime>
 
-#include "algobase.h"
-#include "memory.h"
-#include "heap_algo.h"
-#include "functional.h"
+#include "dbase/stl/algobase.h"
+#include "dbase/stl/memory.h"
+#include "dbase/stl/heap_algo.h"
+#include "dbase/stl/functional.h"
 
 namespace dbase::stl
 {

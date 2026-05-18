@@ -6,12 +6,12 @@
 
 #include <initializer_list>
 
-#include "algo.h"
-#include "functional.h"
-#include "memory.h"
-#include "vector.h"
-#include "util.h"
-#include "exceptdef.h"
+#include "dbase/stl/algo.h"
+#include "dbase/stl/functional.h"
+#include "dbase/stl/memory.h"
+#include "dbase/stl/vector.h"
+#include "dbase/stl/util.h"
+#include "dbase/stl/exceptdef.h"
 
 namespace dbase::stl
 {

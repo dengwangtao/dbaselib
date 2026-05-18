@@ -8,10 +8,10 @@
 #include <cstdlib>
 #include <climits>
 
-#include "algobase.h"
-#include "allocator.h"
-#include "construct.h"
-#include "uninitialized.h"
+#include "dbase/stl/algobase.h"
+#include "dbase/stl/allocator.h"
+#include "dbase/stl/construct.h"
+#include "dbase/stl/uninitialized.h"
 
 namespace dbase::stl
 {

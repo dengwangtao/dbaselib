@@ -1,7 +1,7 @@
-#include "dbase/stl/util.hpp"
+#include "dbase/stl/util.h"
 #include "dbase/log/log.h"
-#include "dbase/stl/type_traits.hpp"
-#include "dbase/stl/iterator.hpp"
+#include "dbase/stl/type_traits.h"
+#include "dbase/stl/iterator.h"
 
 int main()
 {

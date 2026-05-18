@@ -6,10 +6,10 @@
 
 #include <iostream>
 
-#include "iterator.h"
-#include "memory.h"
-#include "functional.h"
-#include "exceptdef.h"
+#include "dbase/stl/iterator.h"
+#include "dbase/stl/memory.h"
+#include "dbase/stl/functional.h"
+#include "dbase/stl/exceptdef.h"
 
 namespace dbase::stl
 {

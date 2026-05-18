@@ -3,11 +3,11 @@
 
 // 这个头文件包含了 dbase::stl 的所有算法，包括基本算法，数值算法，heap 算法，set 算法和其他算法
 
-#include "algobase.h"
-#include "algo.h"
-#include "set_algo.h"
-#include "heap_algo.h"
-#include "numeric.h"
+#include "dbase/stl/algobase.h"
+#include "dbase/stl/algo.h"
+#include "dbase/stl/set_algo.h"
+#include "dbase/stl/heap_algo.h"
+#include "dbase/stl/numeric.h"
 
 namespace dbase::stl
 {

@@ -12,7 +12,7 @@
 //   * emplace_hint
 //   * insert
 
-#include "hashtable.h"
+#include "dbase/stl/hashtable.h"
 
 namespace dbase::stl
 {

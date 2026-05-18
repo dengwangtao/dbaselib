@@ -5,10 +5,10 @@
 // queue          : 队列
 // priority_queue : 优先队列
 
-#include "deque.h"
-#include "vector.h"
-#include "functional.h"
-#include "heap_algo.h"
+#include "dbase/stl/deque.h"
+#include "dbase/stl/vector.h"
+#include "dbase/stl/functional.h"
+#include "dbase/stl/heap_algo.h"
 
 namespace dbase::stl
 {

@@ -4,7 +4,7 @@
 // 这个头文件包含了一个模板类 stack
 // stack : 栈
 
-#include "deque.h"
+#include "dbase/stl/deque.h"
 
 namespace dbase::stl
 {

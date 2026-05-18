@@ -18,11 +18,11 @@
 
 #include <initializer_list>
 
-#include "iterator.h"
-#include "memory.h"
-#include "util.h"
-#include "exceptdef.h"
-#include "algo.h"
+#include "dbase/stl/iterator.h"
+#include "dbase/stl/memory.h"
+#include "dbase/stl/util.h"
+#include "dbase/stl/exceptdef.h"
+#include "dbase/stl/algo.h"
 
 namespace dbase::stl
 {

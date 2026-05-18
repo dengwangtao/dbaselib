@@ -8,11 +8,11 @@
 
 #include <cassert>
 
-#include "functional.h"
-#include "iterator.h"
-#include "memory.h"
-#include "type_traits.h"
-#include "exceptdef.h"
+#include "dbase/stl/functional.h"
+#include "dbase/stl/iterator.h"
+#include "dbase/stl/memory.h"
+#include "dbase/stl/type_traits.h"
+#include "dbase/stl/exceptdef.h"
 
 namespace dbase::stl
 {
