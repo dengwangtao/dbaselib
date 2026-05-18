@@ -38,4 +38,7 @@ using bool_constant = constant<bool, val>;
 using true_type = bool_constant<true>;
 using false_type = bool_constant<false>;
 
+template <class... Types>
+using void_t = void;
+
 };  // namespace dbase::stl

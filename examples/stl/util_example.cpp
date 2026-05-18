@@ -1,5 +1,6 @@
 #include "dbase/stl/util.hpp"
 #include "dbase/log/log.h"
+#include "dbase/stl/type_traits.hpp"
 
 int main()
 {
@@ -28,6 +29,8 @@ int main()
     DBASE_LOG_INFO("p5=[{},{}]", p5.first, p5.second);
     DBASE_LOG_INFO("p6=[{},{}]", p6.first, p6.second);
 
+
+    static_assert(dbase::stl::is_pair_v<decltype(p6)> == true, "");
 
     return 0;
 }
