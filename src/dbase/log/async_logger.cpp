@@ -86,10 +86,7 @@ std::size_t AsyncLogger::droppedCount() const noexcept
     return m_droppedCount.load(std::memory_order_acquire);
 }
 
-void AsyncLogger::log(
-        Level level,
-        std::string_view message,
-        const std::source_location& location)
+void AsyncLogger::log(Level level, std::string_view message, const std::source_location& location)
 {
     if (!shouldLog(level))
     {
@@ -97,7 +94,7 @@ void AsyncLogger::log(
     }
 
     QueueItem item;
-    item.event = detail::makeLogEvent(level, message, location);
+    item.event = detail::makeLogEvent(level, message, location, m_formatter.style());
     item.sequence = m_nextSequence.fetch_add(1, std::memory_order_acq_rel) + 1;
     (void)enqueueItem(std::move(item));
 }

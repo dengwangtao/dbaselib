@@ -23,13 +23,55 @@ enum class Level
     Fatal
 };
 
-enum class PatternStyle
+enum class PatternStyle : std::uint32_t
 {
-    Compact = 0,  // [2026-05-17 19:30:22.848] [info] This is an info message
-    Source,       // [2026-05-17 19:30:38.644] [info] [log_example.cpp:11] This is an info message
-    SourceFunc,   // [2026-05-17 19:30:59.993] [info] [log_example.cpp:11] [main()] This is an info message
-    Threaded      // [2026-05-17 19:29:17.308] [info] [82352:75780] [log_example.cpp:11] [main()] This is an info message
+    None = 0,
+
+    Timestamp = 1u << 0,
+    Level = 1u << 1,
+    Message = 1u << 2,
+
+    File = 1u << 3,
+    Line = 1u << 4,
+    Function = 1u << 5,
+
+    ProcessId = 1u << 6,
+    ThreadId = 1u << 7,
+
+    Compact =
+            static_cast<std::uint32_t>(Timestamp) | static_cast<std::uint32_t>(Level) | static_cast<std::uint32_t>(Message),
+
+    Source =
+            static_cast<std::uint32_t>(Timestamp) | static_cast<std::uint32_t>(Level) | static_cast<std::uint32_t>(File) | static_cast<std::uint32_t>(Line) | static_cast<std::uint32_t>(Message),
+
+    SourceFunc =
+            static_cast<std::uint32_t>(Timestamp) | static_cast<std::uint32_t>(Level) | static_cast<std::uint32_t>(File) | static_cast<std::uint32_t>(Line) | static_cast<std::uint32_t>(Function) | static_cast<std::uint32_t>(Message),
+
+    Threaded =
+            static_cast<std::uint32_t>(Timestamp) | static_cast<std::uint32_t>(Level) | static_cast<std::uint32_t>(ProcessId) | static_cast<std::uint32_t>(ThreadId) | static_cast<std::uint32_t>(File) | static_cast<std::uint32_t>(Line) | static_cast<std::uint32_t>(Function) | static_cast<std::uint32_t>(Message)
 };
+
+[[nodiscard]] constexpr PatternStyle operator|(PatternStyle lhs, PatternStyle rhs) noexcept
+{
+    return static_cast<PatternStyle>(
+            static_cast<std::uint32_t>(lhs) | static_cast<std::uint32_t>(rhs));
+}
+
+[[nodiscard]] constexpr PatternStyle operator&(PatternStyle lhs, PatternStyle rhs) noexcept
+{
+    return static_cast<PatternStyle>(static_cast<std::uint32_t>(lhs) & static_cast<std::uint32_t>(rhs));
+}
+
+constexpr PatternStyle& operator|=(PatternStyle& lhs, PatternStyle rhs) noexcept
+{
+    lhs = lhs | rhs;
+    return lhs;
+}
+
+[[nodiscard]] constexpr bool hasPatternField(PatternStyle style, PatternStyle field) noexcept
+{
+    return (style & field) != PatternStyle::None;
+}
 
 struct LogEvent
 {
@@ -43,10 +85,7 @@ struct LogEvent
 
 namespace detail
 {
-[[nodiscard]] LogEvent makeLogEvent(
-        Level level,
-        std::string_view message,
-        const std::source_location& location);
+[[nodiscard]] LogEvent makeLogEvent(Level level, std::string_view message, const std::source_location& location, PatternStyle style);
 }
 
 class Formatter
@@ -54,15 +93,11 @@ class Formatter
     public:
         Formatter() = default;
         explicit Formatter(PatternStyle style);
+
         void setStyle(PatternStyle style) noexcept;
         [[nodiscard]] PatternStyle style() const noexcept;
-        [[nodiscard]] std::string format(const LogEvent& event) const;
 
-    private:
-        [[nodiscard]] std::string formatCompact(const LogEvent& event) const;
-        [[nodiscard]] std::string formatSource(const LogEvent& event) const;
-        [[nodiscard]] std::string formatSourceFunction(const LogEvent& event) const;
-        [[nodiscard]] std::string formatThreaded(const LogEvent& event) const;
+        [[nodiscard]] std::string format(const LogEvent& event) const;
 
     private:
         PatternStyle m_style{PatternStyle::Source};
@@ -88,23 +123,16 @@ class Logger
         void clearSinks();
         void flush();
 
-        void log(
-                Level level,
-                std::string_view message,
-                const std::source_location& location = std::source_location::current());
+        void log(Level level, std::string_view message, const std::source_location& location = std::source_location::current());
 
         template <typename... Args>
-        void logf(
-                Level level,
-                const std::source_location& location,
-                std::format_string<Args...>
-                        fmt,
-                Args&&... args)
+        void logf(Level level, const std::source_location& location, std::format_string<Args...> fmt, Args&&... args)
         {
             if (!shouldLog(level))
             {
                 return;
             }
+
             log(level, std::format(fmt, std::forward<Args>(args)...), location);
         }
 
@@ -128,23 +156,16 @@ void resetDefaultSinks();
 void flushDefaultLogger();
 void clearDefaultSinks();
 
-void log(
-        Level level,
-        std::string_view message,
-        const std::source_location& location = std::source_location::current());
+void log(Level level, std::string_view message, const std::source_location& location = std::source_location::current());
 
 template <typename... Args>
-void logf(
-        Level level,
-        const std::source_location& location,
-        std::format_string<Args...>
-                fmt,
-        Args&&... args)
+void logf(Level level, const std::source_location& location, std::format_string<Args...> fmt, Args&&... args)
 {
     if (!defaultLogger().shouldLog(level))
     {
         return;
     }
+
     defaultLogger().log(level, std::format(fmt, std::forward<Args>(args)...), location);
 }
 }  // namespace dbase::log

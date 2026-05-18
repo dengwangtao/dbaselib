@@ -2,7 +2,7 @@
 #include "dbase/log/sink.h"
 #include "dbase/platform/process.h"
 #include "dbase/time/time.h"
-#include <filesystem>
+
 #include <format>
 #include <string>
 #include <utility>
@@ -13,7 +13,13 @@ namespace
 {
 std::string baseFileName(std::string_view file)
 {
-    return std::filesystem::path(file).filename().string();
+    const auto pos = file.find_last_of("/\\");
+    if (pos == std::string_view::npos)
+    {
+        return std::string(file);
+    }
+
+    return std::string(file.substr(pos + 1));
 }
 
 void replaceAllInPlace(std::string& text, std::string_view from, std::string_view to)
@@ -34,6 +40,7 @@ void replaceAllInPlace(std::string& text, std::string_view from, std::string_vie
 std::string normalizeFunctionName(std::string_view func)
 {
     std::string text(func);
+
     replaceAllInPlace(text, "__cdecl ", "");
     replaceAllInPlace(text, "__thiscall ", "");
     replaceAllInPlace(text, "__vectorcall ", "");
@@ -57,27 +64,38 @@ std::string normalizeFunctionName(std::string_view func)
 std::string formatTimestampUs(std::int64_t timestampUs)
 {
     const auto ms = static_cast<int>((timestampUs / 1000) % 1000);
-    return std::format(
-            "{}.{:03}",
-            dbase::time::formatTimestampMs(timestampUs / 1000, "%Y-%m-%d %H:%M:%S"),
-            ms);
+
+    return std::format("{}.{:03}", dbase::time::formatTimestampMs(timestampUs / 1000, "%Y-%m-%d %H:%M:%S"), ms);
+}
+
+void appendBracketed(std::string& output, std::string_view text)
+{
+    output += '[';
+    output += text;
+    output += "] ";
 }
 }  // namespace
 
 namespace detail
 {
-LogEvent makeLogEvent(
-        Level level,
-        std::string_view message,
-        const std::source_location& location)
+LogEvent makeLogEvent(Level level, std::string_view message, const std::source_location& location, PatternStyle style)
 {
     LogEvent event;
     event.level = level;
     event.message = std::string(message);
-    event.pid = dbase::platform::pid();
-    event.tid = dbase::platform::tid();
     event.timestampUs = dbase::time::nowUs();
     event.sourceLocation = location;
+
+    if (hasPatternField(style, PatternStyle::ProcessId))
+    {
+        event.pid = dbase::platform::pid();
+    }
+
+    if (hasPatternField(style, PatternStyle::ThreadId))
+    {
+        event.tid = dbase::platform::tid();
+    }
+
     return event;
 }
 }  // namespace detail
@@ -99,65 +117,79 @@ PatternStyle Formatter::style() const noexcept
 
 std::string Formatter::format(const LogEvent& event) const
 {
-    switch (m_style)
+    std::string output;
+    output.reserve(event.message.size() + 128);
+
+    if (hasPatternField(m_style, PatternStyle::Timestamp))
     {
-        case PatternStyle::Compact:
-            return formatCompact(event);
-        case PatternStyle::Source:
-            return formatSource(event);
-        case PatternStyle::SourceFunc:
-            return formatSourceFunction(event);
-        case PatternStyle::Threaded:
-            return formatThreaded(event);
-        default:
-            return formatSource(event);
+        appendBracketed(output, formatTimestampUs(event.timestampUs));
     }
-}
 
-std::string Formatter::formatCompact(const LogEvent& event) const
-{
-    return std::format(
-            "[{}] [{}] {}",
-            formatTimestampUs(event.timestampUs),
-            toSpdlogString(event.level),
-            event.message);
-}
+    if (hasPatternField(m_style, PatternStyle::Level))
+    {
+        appendBracketed(output, toSpdlogString(event.level));
+    }
 
-std::string Formatter::formatSource(const LogEvent& event) const
-{
-    return std::format(
-            "[{}] [{}] [{}:{}] {}",
-            formatTimestampUs(event.timestampUs),
-            toSpdlogString(event.level),
-            baseFileName(event.sourceLocation.file_name()),
-            event.sourceLocation.line(),
-            event.message);
-}
+    if (hasPatternField(m_style, PatternStyle::ProcessId) || hasPatternField(m_style, PatternStyle::ThreadId))
+    {
+        output += '[';
 
-std::string Formatter::formatSourceFunction(const LogEvent& event) const
-{
-    return std::format(
-            "[{}] [{}] [{}:{}] [{}] {}",
-            formatTimestampUs(event.timestampUs),
-            toSpdlogString(event.level),
-            baseFileName(event.sourceLocation.file_name()),
-            event.sourceLocation.line(),
-            normalizeFunctionName(event.sourceLocation.function_name()),
-            event.message);
-}
+        bool needSeparator = false;
 
-std::string Formatter::formatThreaded(const LogEvent& event) const
-{
-    return std::format(
-            "[{}] [{}] [p={}|t={}] [{}:{}] [{}] {}",
-            formatTimestampUs(event.timestampUs),
-            toSpdlogString(event.level),
-            event.pid,
-            event.tid,
-            baseFileName(event.sourceLocation.file_name()),
-            event.sourceLocation.line(),
-            normalizeFunctionName(event.sourceLocation.function_name()),
-            event.message);
+        if (hasPatternField(m_style, PatternStyle::ProcessId))
+        {
+            output += std::format("p={}", event.pid);
+            needSeparator = true;
+        }
+
+        if (hasPatternField(m_style, PatternStyle::ThreadId))
+        {
+            if (needSeparator)
+            {
+                output += '|';
+            }
+
+            output += std::format("t={}", event.tid);
+        }
+
+        output += "] ";
+    }
+
+    if (hasPatternField(m_style, PatternStyle::File))
+    {
+        output += '[';
+        output += baseFileName(event.sourceLocation.file_name());
+
+        if (hasPatternField(m_style, PatternStyle::Line))
+        {
+            output += std::format(":{}", event.sourceLocation.line());
+        }
+
+        output += "] ";
+    }
+    else if (hasPatternField(m_style, PatternStyle::Line))
+    {
+        output += std::format("[line={}] ", event.sourceLocation.line());
+    }
+
+    if (hasPatternField(m_style, PatternStyle::Function))
+    {
+        appendBracketed(
+                output,
+                normalizeFunctionName(event.sourceLocation.function_name()));
+    }
+
+    if (hasPatternField(m_style, PatternStyle::Message))
+    {
+        output += event.message;
+    }
+
+    if (!output.empty() && output.back() == ' ')
+    {
+        output.pop_back();
+    }
+
+    return output;
 }
 
 Logger::Logger()
@@ -228,6 +260,7 @@ void Logger::clearSinks()
 void Logger::flush()
 {
     std::vector<std::shared_ptr<Sink>> sinksCopy;
+
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         sinksCopy = m_sinks;
@@ -239,10 +272,7 @@ void Logger::flush()
     }
 }
 
-void Logger::log(
-        Level level,
-        std::string_view message,
-        const std::source_location& location)
+void Logger::log(Level level, std::string_view message, const std::source_location& location)
 {
     if (!shouldLog(level))
     {
@@ -259,7 +289,10 @@ void Logger::log(
         formatterCopy = m_formatter;
     }
 
-    const auto event = detail::makeLogEvent(level, message, location);
+    const auto style = formatterCopy.style();
+
+    const auto event = detail::makeLogEvent(level, message, location, style);
+
     const auto formatted = formatterCopy.format(event);
 
     for (const auto& sink : sinksCopy)
@@ -361,10 +394,7 @@ void clearDefaultSinks()
     defaultLogger().clearSinks();
 }
 
-void log(
-        Level level,
-        std::string_view message,
-        const std::source_location& location)
+void log(Level level, std::string_view message, const std::source_location& location)
 {
     defaultLogger().log(level, message, location);
 }
