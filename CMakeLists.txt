@@ -33,7 +33,7 @@ foreach(OUTPUTCONFIG Debug Release RelWithDebInfo MinSizeRel)
 endforeach()
 
 option(DBASE_BUILD_SHARED "Build shared library" OFF)
-option(DBASE_BUILD_TESTS "Build tests" OFF)
+option(DBASE_BUILD_TESTS "Build tests" ON)
 option(DBASE_BUILD_BENCHMARKS "Build benchmarks" ON)
 # option(DBASE_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 # option(DBASE_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)

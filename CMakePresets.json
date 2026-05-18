@@ -14,7 +14,7 @@
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
         "DBASE_BUILD_SHARED": "OFF",
         "DBASE_BUILD_TESTS": "ON",
-        "DBASE_BUILD_BENCHMARKS": "OFF",
+        "DBASE_BUILD_BENCHMARKS": "ON",
         "DBASE_BUILD_EXAMPLES": "ON",
         "DBASE_ENABLE_WARNINGS": "ON",
         "DBASE_ENABLE_WERROR": "OFF"

@@ -15,7 +15,6 @@ target_link_libraries(dbase_benchmarks
     PRIVATE
         dbase::dbase
         benchmark::benchmark
-        Threads::Threads
 )
 
 target_compile_features(dbase_benchmarks PRIVATE cxx_std_20)
