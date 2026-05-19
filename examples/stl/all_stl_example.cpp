@@ -29,6 +29,21 @@ struct is_string<dbase::stl::basic_string<Args...>> : dbase::stl::true_type
 {
 };
 
+template <typename... Args>
+struct is_string<const dbase::stl::basic_string<Args...>> : dbase::stl::true_type
+{
+};
+
+template <typename... Args>
+struct is_string<volatile dbase::stl::basic_string<Args...>> : dbase::stl::true_type
+{
+};
+
+template <typename... Args>
+struct is_string<const volatile dbase::stl::basic_string<Args...>> : dbase::stl::true_type
+{
+};
+
 template <class... Args>
 constexpr bool is_string_v = is_string<Args...>::value;
 
@@ -150,7 +165,6 @@ void print(const T& val, Args... args)
 
     print(args...);
 }
-
 
 s32 main()
 {
