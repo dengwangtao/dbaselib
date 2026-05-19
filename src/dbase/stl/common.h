@@ -6,21 +6,21 @@
 
 #include <cstdint>
 
-#define DECL__V(struct_) \
+#define DECL__V(trait_name) \
     template <class T>   \
-    constexpr bool struct_##_v = struct_<T>::value;
+    constexpr bool trait_name##_v = trait_name<T>::value;
 
-#define DECL__V2(struct_)        \
+#define DECL__V2(trait_name)        \
     template <class T, class T2> \
-    constexpr bool struct_##_v = struct_<T, T2>::value;
+    constexpr bool trait_name##_v = trait_name<T, T2>::value;
 
-#define DECL__T(struct_) \
+#define DECL__T(trait_name) \
     template <class T>   \
-    using struct_##_t = typename struct_<T>::type;
+    using trait_name##_t = typename trait_name<T>::type;
 
-#define DECL__T2(struct_)        \
+#define DECL__T2(trait_name)        \
     template <class T, class T2> \
-    using struct_##_t = typename struct_<T, T2>::type;
+    using trait_name##_t = typename trait_name<T, T2>::type;
 
 using u8 = uint8_t;
 using u16 = uint16_t;
@@ -37,22 +37,21 @@ namespace dbase::stl
 {
 
 template <class T, T val>
-struct dwt_constant
+struct constant
 {
         static constexpr T value = val;
         using value_type = T;
-        using type = dwt_constant;
+        using type = constant;
 
         constexpr operator value_type() const noexcept { return value; }
         constexpr value_type operator()() const noexcept { return value; }
 };
 
 template <bool val>
-using bool_constant = dwt_constant<bool, val>;
+using bool_constant = constant<bool, val>;
 
 using true_type = bool_constant<true>;
 using false_type = bool_constant<false>;
-
 
 template <class... _Types>
 using void_t = void;
